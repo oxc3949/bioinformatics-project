@@ -64,83 +64,20 @@ for(file in tps_files){
 ```
 
 ```{r centroid}
-library(ggplot2)
-library(ggpubr)
-library(dplyr)
-library(emmeans)
-library(stringr)
-centroid_df <- centroid_df %>%
-  mutate(StageSex = factor(paste(Stage, Sex), 
-                           levels = c("5th Instar Female", "5th Instar Male",
-                                      "Adult Female", "Adult Male")))
-# Load necessary libraries
-library(emmeans)
+library(reshape2)
+centroid_df <- data.frame(
+  Specimen = unlist(lapply(all_centroid_sizes, function(x) 1:length(x))),
+  Size = unlist(all_centroid_sizes),
+  Dataset = rep(names(all_centroid_sizes), times = sapply(all_centroid_sizes, length))
+)
 
-# ------------------------
-# 1. Two-way ANOVA
-# ------------------------
-anova_res <- aov(Size ~ Stage * Sex, data = centroid_df)
-
-# Show ANOVA table
-summary(anova_res)
-
-# ------------------------
-# 2. Tukey HSD post-hoc pairwise comparisons
-# ------------------------
-# Get pairwise comparisons for all Stage * Sex combinations
-tukey_res <- emmeans(anova_res, pairwise ~ Stage * Sex, adjust = "tukey")
-
-# Extract results
-pairwise_df <- as.data.frame(tukey_res$contrasts)
-
-# Optional: show significance symbols
-pairwise_df <- pairwise_df %>%
-  dplyr::mutate(
-    p.signif = dplyr::case_when(
-      p.value < 0.001 ~ "***",
-      p.value < 0.01  ~ "**",
-      p.value < 0.05  ~ "*",
-      TRUE            ~ "ns"
-    )
-  )
-
-# View the pairwise comparisons
-pairwise_df
-
-
-# Pairwise comparisons with Tukey correction
-emmeans_res <- emmeans(anova_res, pairwise ~ Stage * Sex, adjust = "tukey")
-pairwise_df <- as.data.frame(emmeans_res$contrasts)
-
-# Split contrast into group1 and group2
-pairwise_df <- pairwise_df %>%
-  mutate(
-    group1 = str_extract(contrast, "^[^\\-]+") %>% str_trim(),
-    group2 = str_extract(contrast, "[^\\-]+$") %>% str_trim(),
-    p.signif = case_when(
-      p.value < 0.001 ~ "***",
-      p.value < 0.01  ~ "**",
-      p.value < 0.05  ~ "*",
-      TRUE            ~ "ns"
-    ),
-    y.position = max(centroid_df$Size) * 1.05 + row_number() * 0.2
-  )
-
-# Plot with asterisks
-ggplot(centroid_df, aes(x = StageSex, y = Size, fill = Sex)) +
+ggplot(centroid_df, aes(x=Dataset, y=Size, fill=Dataset)) +
   geom_boxplot() +
   theme_minimal() +
   ylab("Centroid Size") +
-  ggtitle("Centroid Size by Stage and Sex") +
-  stat_pvalue_manual(
-    pairwise_df,
-    label = "p.signif",
-    xmin = "group1",
-    xmax = "group2",
-    tip.length = 0.02,
-    hide.ns = TRUE
-  )
+  ggtitle("Comparison of Centroid Sizes Across Datasets")
 ```
+                    
 ```{r PCA}
 library(ggplot2)
 
